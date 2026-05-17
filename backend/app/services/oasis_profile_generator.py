@@ -17,6 +17,7 @@ from datetime import datetime
 
 from openai import OpenAI
 from zep_cloud.client import Zep
+from ..utils.llm_client import LLMClient
 
 from ..config import Config
 from ..utils.logger import get_logger
@@ -192,10 +193,8 @@ class OasisProfileGenerator:
         if not self.api_key:
             raise ValueError("LLM_API_KEY 未配置")
         
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+        # 使用统一的LLM客户端封装，便于profile和限流管理
+        self.llm = LLMClient(api_key=self.api_key, base_url=self.base_url, model=self.model_name)
         
         # Zep客户端用于检索丰富上下文
         self.zep_api_key = zep_api_key or Config.ZEP_API_KEY
@@ -526,15 +525,14 @@ class OasisProfileGenerator:
         
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
+                response = self.llm.raw_create(
                     model=self.model_name,
                     messages=[
                         {"role": "system", "content": self._get_system_prompt(is_individual)},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1)  # 每次重试降低温度
-                    # 不设置max_tokens，让LLM自由发挥
+                    temperature=0.7 - (attempt * 0.1)
                 )
                 
                 content = response.choices[0].message.content

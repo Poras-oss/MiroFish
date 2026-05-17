@@ -17,6 +17,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 
 from openai import OpenAI
+from ..utils.llm_client import LLMClient
 
 from ..config import Config
 from ..utils.logger import get_logger
@@ -234,10 +235,8 @@ class SimulationConfigGenerator:
         if not self.api_key:
             raise ValueError("LLM_API_KEY 未配置")
         
-        self.client = OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
+        # 统一使用 LLMClient 封装（支持profile与速率限制）
+        self.llm = LLMClient(api_key=self.api_key, base_url=self.base_url, model=self.model_name)
     
     def generate_config(
         self,
@@ -439,15 +438,14 @@ class SimulationConfigGenerator:
         
         for attempt in range(max_attempts):
             try:
-                response = self.client.chat.completions.create(
+                response = self.llm.raw_create(
                     model=self.model_name,
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt}
                     ],
                     response_format={"type": "json_object"},
-                    temperature=0.7 - (attempt * 0.1)  # 每次重试降低温度
-                    # 不设置max_tokens，让LLM自由发挥
+                    temperature=0.7 - (attempt * 0.1)
                 )
                 
                 content = response.choices[0].message.content
