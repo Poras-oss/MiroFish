@@ -1259,12 +1259,12 @@ class ReportAgent:
             tools_description=self._get_tools_description(),
         )
 
-        # 构建用户prompt - 每个已完成章节各传入最大4000字
+        # 构建用户prompt - 每个已完成章节各传入最大1500字
         if previous_sections:
             previous_parts = []
             for sec in previous_sections:
-                # 每个章节最多4000字
-                truncated = sec[:4000] + "..." if len(sec) > 4000 else sec
+                # 每个章节最多1500字
+                truncated = sec[:1500] + "..." if len(sec) > 1500 else sec
                 previous_parts.append(truncated)
             previous_content = "\n\n---\n\n".join(previous_parts)
         else:
@@ -1303,7 +1303,7 @@ class ReportAgent:
             response = self.llm.chat(
                 messages=messages,
                 temperature=0.5,
-                max_tokens=4096
+                max_tokens=2048
             )
 
             # 检查 LLM 返回是否为 None（API 异常或内容为空）
@@ -1506,7 +1506,7 @@ class ReportAgent:
         response = self.llm.chat(
             messages=messages,
             temperature=0.5,
-            max_tokens=4096
+            max_tokens=2048
         )
 
         # 检查强制收尾时 LLM 返回是否为 None

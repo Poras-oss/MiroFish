@@ -29,8 +29,13 @@ class Config:
     
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
-    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
+    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gemini-2.5-flash')
+    
+    # 备用/回退 LLM 配置（如 Gemini API，用于大文本生成或 Groq 限流报错时的完美兜底）
+    LLM_FALLBACK_API_KEY = os.environ.get('LLM_FALLBACK_API_KEY')
+    LLM_FALLBACK_BASE_URL = os.environ.get('LLM_FALLBACK_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
+    LLM_FALLBACK_MODEL_NAME = os.environ.get('LLM_FALLBACK_MODEL_NAME', 'gemini-2.5-flash')
     
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
@@ -64,33 +69,33 @@ class Config:
     REPORT_AGENT_TEMPERATURE = float(os.environ.get('REPORT_AGENT_TEMPERATURE', '0.5'))
     # 模型档位配置（逻辑角色 -> 模型与速率/令牌上限）
     MODEL_PROFILES = {
-        # retrieval / summarization: small or groq mini
+        # retrieval / summarization
         "retrieval": {
-            "model": os.environ.get('MODEL_RETRIEVAL', 'groq/compound-mini'),
-            "rpm": int(os.environ.get('MODEL_RETRIEVAL_RPM', '30')),
-            "tpm": int(os.environ.get('MODEL_RETRIEVAL_TPM', '70000')),
-            "max_tokens": int(os.environ.get('MODEL_RETRIEVAL_MAX_TOKENS', '1024'))
+            "model": os.environ.get('MODEL_RETRIEVAL', 'gemini-2.5-flash'),
+            "rpm": int(os.environ.get('MODEL_RETRIEVAL_RPM', '1000')),
+            "tpm": int(os.environ.get('MODEL_RETRIEVAL_TPM', '4000000')),
+            "max_tokens": int(os.environ.get('MODEL_RETRIEVAL_MAX_TOKENS', '8192'))
         },
         # mid-quality JSON / structured outputs
         "structured": {
-            "model": os.environ.get('MODEL_STRUCTURED', 'groq/compound'),
-            "rpm": int(os.environ.get('MODEL_STRUCTURED_RPM', '30')),
-            "tpm": int(os.environ.get('MODEL_STRUCTURED_TPM', '70000')),
+            "model": os.environ.get('MODEL_STRUCTURED', 'gemini-2.5-flash'),
+            "rpm": int(os.environ.get('MODEL_STRUCTURED_RPM', '1000')),
+            "tpm": int(os.environ.get('MODEL_STRUCTURED_TPM', '4000000')),
             "max_tokens": int(os.environ.get('MODEL_STRUCTURED_MAX_TOKENS', '8192'))
         },
-        # final synthesis / agent interactions (higher quality) - keep on Groq for now
+        # final synthesis / agent interactions (higher quality)
         "final": {
-            "model": os.environ.get('MODEL_FINAL', 'groq/compound'),
-            "rpm": int(os.environ.get('MODEL_FINAL_RPM', '30')),
-            "tpm": int(os.environ.get('MODEL_FINAL_TPM', '70000')),
+            "model": os.environ.get('MODEL_FINAL', 'gemini-2.5-pro'),
+            "rpm": int(os.environ.get('MODEL_FINAL_RPM', '1000')),
+            "tpm": int(os.environ.get('MODEL_FINAL_TPM', '4000000')),
             "max_tokens": int(os.environ.get('MODEL_FINAL_MAX_TOKENS', '8192'))
         },
-        # local small fallback (use only for very small tasks when groq limit is insufficient)
+        # local small fallback
         "local_small": {
-            "model": os.environ.get('MODEL_LOCAL_SMALL', 'allam-2-7b'),
-            "rpm": int(os.environ.get('MODEL_LOCAL_SMALL_RPM', '30')),
-            "tpm": int(os.environ.get('MODEL_LOCAL_SMALL_TPM', '7200')),
-            "max_tokens": int(os.environ.get('MODEL_LOCAL_SMALL_MAX_TOKENS', '2048'))
+            "model": os.environ.get('MODEL_LOCAL_SMALL', 'gemini-2.5-flash'),
+            "rpm": int(os.environ.get('MODEL_LOCAL_SMALL_RPM', '1000')),
+            "tpm": int(os.environ.get('MODEL_LOCAL_SMALL_TPM', '4000000')),
+            "max_tokens": int(os.environ.get('MODEL_LOCAL_SMALL_MAX_TOKENS', '8192'))
         }
     }
 
@@ -98,7 +103,7 @@ class Config:
     # Default to False since we keep everything on Groq for now
     USE_LOCAL_SMALL_FALLBACK = os.environ.get('USE_LOCAL_SMALL_FALLBACK', 'false').lower() == 'true'
     # Prompt trimming / caching
-    PROMPT_MAX_CHARS = int(os.environ.get('PROMPT_MAX_CHARS', '50000'))
+    PROMPT_MAX_CHARS = int(os.environ.get('PROMPT_MAX_CHARS', '2000000'))
     PROMPT_CACHE_TTL = int(os.environ.get('PROMPT_CACHE_TTL', '3600'))  # seconds
     USE_GROQ_CACHE = os.environ.get('USE_GROQ_CACHE', 'true').lower() == 'true'
     

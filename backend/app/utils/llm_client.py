@@ -13,6 +13,9 @@ from typing import Optional, Dict, Any, List
 from openai import OpenAI
 
 from ..config import Config
+from .logger import get_logger
+
+logger = get_logger('mirofish.llm_client')
 
 
 class LLMClient:
@@ -35,6 +38,12 @@ class LLMClient:
             api_key=self.api_key,
             base_url=self.base_url
         )
+        self.fallback_client = None
+        if getattr(Config, 'LLM_FALLBACK_API_KEY', None):
+            self.fallback_client = OpenAI(
+                api_key=Config.LLM_FALLBACK_API_KEY,
+                base_url=getattr(Config, 'LLM_FALLBACK_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai/')
+            )
         # 简单内存速率限制器（每个profile使用固定窗口）
         self._locks = {}
         self._timestamps = {}
@@ -182,8 +191,20 @@ class LLMClient:
                     time.sleep(min(wait_for, 1.0))
                 timestamps.append(time.time())
 
-        # Finally call underlying client
-        resp = self.client.chat.completions.create(**kwargs)
+        # Finally call underlying client with automatic retry
+        max_retries = 2
+        resp = None
+        for attempt in range(max_retries + 1):
+            try:
+                resp = self.client.chat.completions.create(**kwargs)
+                break
+            except Exception as e:
+                err_str = str(e)
+                if attempt < max_retries and ('429' in err_str or 'rate limit' in err_str.lower() or '503' in err_str):
+                    logger.warning(f"Rate limit or server error ({err_str}), retrying attempt {attempt+1}/{max_retries}...")
+                    time.sleep(2.0)  # Wait briefly before retry
+                    continue
+                raise e
 
         # Store in prompt cache if applicable
         if cacheable and cache_key:
